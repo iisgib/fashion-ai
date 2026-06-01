@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Content Studio for Fashion Brands</title>
+
+<!-- =========================================================
+     ШРИФТЫ (единственная внешняя зависимость — Google Fonts)
+     Playfair Display — элегантный serif для заголовков
+     Manrope — чистый sans-serif для текста
+     Оба поддерживают кириллицу.
+========================================================= -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   ПЕРЕМЕННЫЕ / ДИЗАЙН-СИСТЕМА
+========================================================= */
+:root{
+  --ink:        #0b0a08;   /* тёплый чёрный фон */
+  --ink-2:      #100e0b;
+  --ink-3:      #15120d;
+  --cream:      #f4efe5;   /* молочный */
+  --cream-soft: rgba(244,239,229,.66);
+  --cream-dim:  rgba(244,239,229,.40);
+  --champagne:  #e6d4b0;   /* шампань */
+  --gold:       #c6a24e;   /* золото */
+  --gold-soft:  #d8be86;
+  --gold-deep:  #9a7d35;
+  --line:       rgba(230,212,176,.14);
+  --line-soft:  rgba(230,212,176,.08);
+
+  --serif: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+  --serif-2: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  --sans: 'Manrope', system-ui, sans-serif;
+
+  --ease: cubic-bezier(.16,.84,.32,1);
+  --maxw: 1280px;
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+body{
+  background:var(--ink);
+  color:var(--cream);
+  font-family:var(--sans);
+  font-weight:300;
+  line-height:1.6;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{ background:var(--gold); color:var(--ink); }
+
+/* Тонкий скроллбар */
+::-webkit-scrollbar{ width:9px; }
+::-webkit-scrollbar-track{ background:var(--ink); }
+::-webkit-scrollbar-thumb{ background:#2a251b; border-radius:10px; }
+::-webkit-scrollbar-thumb:hover{ background:var(--gold-deep); }
+
+/* =========================================================
+   ФОНОВЫЕ СЛОИ: зерно + мягкие анимированные градиенты
+========================================================= */
+.bg-fx{ position:fixed; inset:0; pointer-events:none; z-index:0; }
+.bg-glow{
+  position:absolute; border-radius:50%;
+  filter:blur(120px); opacity:.5; mix-blend-mode:screen;
+}
+.bg-glow.a{
+  width:55vw; height:55vw; top:-12%; left:-10%;
+  background:radial-gradient(circle, rgba(198,162,78,.22), transparent 70%);
+  animation:drift1 22s ease-in-out infinite;
+}
+.bg-glow.b{
+  width:48vw; height:48vw; bottom:-15%; right:-8%;
+  background:radial-gradient(circle, rgba(216,190,134,.16), transparent 70%);
+  animation:drift2 28s ease-in-out infinite;
+}
+@keyframes drift1{ 0%,100%{ transform:translate(0,0) } 50%{ transform:translate(6vw,5vh) } }
+@keyframes drift2{ 0%,100%{ transform:translate(0,0) } 50%{ transform:translate(-5vw,-4vh) } }
+
+/* Зерно (SVG-шум через data-uri) */
+.grain{
+  position:fixed; inset:-50%; width:200%; height:200%;
+  z-index:1; pointer-events:none; opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:grain 7s steps(6) infinite;
+}
+@keyframes grain{
+  0%{transform:translate(0,0)} 20%{transform:translate(-4%,3%)}
+  40%{transform:translate(3%,-4%)} 60%{transform:translate(-3%,2%)}
+  80%{transform:translate(4%,-3%)} 100%{transform:translate(0,0)}
+}
+
+/* =========================================================
+   ОБЩЕЕ
+========================================================= */
+.wrap{ position:relative; z-index:2; }
+.container{ width:90%; max-width:var(--maxw); margin:0 auto; }
+section{ position:relative; }
+
+.eyebrow{
+  font-family:var(--sans); font-weight:600;
+  font-size:.72rem; letter-spacing:.42em; text-transform:uppercase;
+  color:var(--gold); display:inline-flex; align-items:center; gap:.9rem;
+}
+.eyebrow::before{ content:""; width:34px; height:1px; background:var(--gold); opacity:.7; }
+
+h1,h2,h3{ font-family:var(--serif); font-weight:400; line-height:1.04; letter-spacing:-.01em; }
+.serif-i{ font-family:var(--serif-2); font-style:italic; font-weight:400; color:var(--champagne); }
+
+.h-sec{ font-size:clamp(2.1rem,5.4vw,4.4rem); }
+.lede{ font-size:clamp(1rem,1.5vw,1.18rem); color:var(--cream-soft); font-weight:300; max-width:46ch; }
+
+/* Кнопка */
+.btn{
+  display:inline-flex; align-items:center; gap:.8rem;
+  font-family:var(--sans); font-weight:600; font-size:.82rem;
+  letter-spacing:.16em; text-transform:uppercase; text-decoration:none;
+  color:var(--ink); background:linear-gradient(180deg,var(--gold-soft),var(--gold));
+  padding:1.15rem 2.2rem; border-radius:999px;
+  transition:transform .5s var(--ease), box-shadow .5s var(--ease);
+  box-shadow:0 14px 40px -16px rgba(198,162,78,.65);
+}
+.btn:hover{ transform:translateY(-3px); box-shadow:0 22px 50px -16px rgba(198,162,78,.8); }
+.btn .dot{ width:7px; height:7px; border-radius:50%; background:var(--ink); }
+
+.btn-ghost{
+  display:inline-flex; align-items:center; gap:.7rem;
+  color:var(--cream); text-decoration:none; font-size:.82rem;
+  letter-spacing:.16em; text-transform:uppercase; font-weight:500;
+  padding:1.1rem 1.9rem; border:1px solid var(--line);
+  border-radius:999px; transition:border-color .4s, color .4s;
+}
+.btn-ghost:hover{ border-color:var(--gold); color:var(--champagne); }
+
+/* Премиальная рамка под video/gif */
+.frame{
+  position:relative; border-radius:18px; overflow:hidden;
+  background:
+     linear-gradient(135deg, rgba(230,212,176,.07), rgba(11,10,8,.4)),
+     var(--ink-2);
+  border:1px solid var(--line);
+  box-shadow:0 30px 80px -40px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.04);
+  display:flex; align-items:center; justify-content:center;
+}
+.frame::after{ /* мягкий блик */
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(120deg, transparent 40%, rgba(244,239,229,.06) 50%, transparent 60%);
+}
+.frame .ph{ text-align:center; color:var(--cream-dim); }
+.frame .ph .play{
+  width:54px; height:54px; margin:0 auto 14px; border-radius:50%;
+  border:1px solid var(--gold); display:flex; align-items:center; justify-content:center;
+}
+.frame .ph .play::before{
+  content:""; border-left:13px solid var(--gold); border-top:8px solid transparent;
+  border-bottom:8px solid transparent; margin-left:4px;
+}
+.frame .ph small{
+  font-size:.62rem; letter-spacing:.34em; text-transform:uppercase; color:var(--gold);
+}
+.frame video, .frame img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+/* =========================================================
+   REVEAL-АНИМАЦИИ (через JS / IntersectionObserver)
+========================================================= */
+.reveal{ opacity:0; transform:translateY(38px); transition:opacity 1s var(--ease), transform 1s var(--ease); }
+.reveal.in{ opacity:1; transform:none; }
+.reveal.d1{ transition-delay:.08s } .reveal.d2{ transition-delay:.16s }
+.reveal.d3{ transition-delay:.24s } .reveal.d4{ transition-delay:.32s }
+.reveal.d5{ transition-delay:.40s } .reveal.d6{ transition-delay:.48s }
+
+/* =========================================================
+   NAV
+========================================================= */
+header.nav{
+  position:fixed; top:0; left:0; right:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:1.4rem 5%; transition:background .5s, padding .5s, border-color .5s;
+  border-bottom:1px solid transparent;
+}
+header.nav.scrolled{
+  background:rgba(11,10,8,.72); backdrop-filter:blur(14px);
+  padding:.9rem 5%; border-color:var(--line-soft);
+}
+.brand{ font-family:var(--serif); font-size:1.15rem; letter-spacing:.02em; }
+.brand b{ font-weight:600; }
+.brand span{ font-family:var(--sans); font-size:.6rem; letter-spacing:.4em; text-transform:uppercase; color:var(--gold); display:block; margin-top:2px;}
+.nav-links{ display:flex; gap:2.2rem; }
+.nav-links a{
+  color:var(--cream-soft); text-decoration:none; font-size:.74rem;
+  letter-spacing:.18em; text-transform:uppercase; font-weight:500; transition:color .35s;
+}
+.nav-links a:hover{ color:var(--gold); }
+.nav-cta{ font-size:.72rem!important; }
+@media(max-width:900px){ .nav-links{ display:none; } }
+
+/* =========================================================
+   HERO
+========================================================= */
+.hero{ min-height:100vh; display:flex; align-items:center; padding:9rem 0 5rem; overflow:hidden; }
+.hero-grid{ display:grid; grid-template-columns:1.15fr .85fr; gap:4rem; align-items:center; }
+.hero h1{
+  font-size:clamp(2.2rem,5.5vw,4.8rem); margin:1.6rem 0; line-height:1.08;
+}
+.hero h1 .row{ display:block; overflow:visible; }
+.hero h1 .row > span{ display:inline-block; transform:translateY(110%); transition:transform 1.1s var(--ease); }
+.hero.loaded h1 .row:nth-child(1) > span{ transform:none; transition-delay:.15s; }
+.hero.loaded h1 .row:nth-child(2) > span{ transform:none; transition-delay:.30s; }
+.hero.loaded h1 .row:nth-child(3) > span{ transform:none; transition-delay:.45s; }
+.hero .sub{
+  font-family:var(--serif-2); font-style:italic; font-size:clamp(1.15rem,2.2vw,1.7rem);
+  color:var(--champagne); margin-bottom:1.4rem;
+}
+.hero .desc{ max-width:40ch; color:var(--cream-soft); margin-bottom:2.4rem; }
+.hero-cta{ display:flex; align-items:center; gap:1.4rem; flex-wrap:wrap; }
+.hero-fade{ opacity:0; transform:translateY(26px); transition:all 1s var(--ease) .6s; }
+.hero.loaded .hero-fade{ opacity:1; transform:none; }
+
+/* Плавающие fashion-панели */
+.hero-panels{ position:relative; height:560px; }
+.panel{
+  position:absolute; border-radius:18px; will-change:transform;
+  opacity:0; transition:opacity 1.1s var(--ease);
+}
+.hero.loaded .panel{ opacity:1; }
+.panel.p1{ width:62%; height:78%; top:0; right:0; transition-delay:.5s; }
+.panel.p2{ width:46%; height:46%; left:0; bottom:4%; transition-delay:.7s; }
+.panel.p3{
+  width:34%; height:24%; right:6%; bottom:-2%; transition-delay:.9s;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--ink-2); border:1px solid var(--line);
+  border-radius:14px; box-shadow:0 24px 60px -30px #000;
+}
+.panel.p3 .stat{ text-align:center; }
+.panel.p3 .stat b{ font-family:var(--serif); font-size:2rem; color:var(--gold); display:block; }
+.panel.p3 .stat span{ font-size:.6rem; letter-spacing:.28em; text-transform:uppercase; color:var(--cream-dim); }
+.float-a{ animation:floatA 8s ease-in-out infinite; }
+.float-b{ animation:floatB 10s ease-in-out infinite; }
+@keyframes floatA{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-18px) } }
+@keyframes floatB{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(14px) } }
+
+.scroll-hint{
+  position:absolute; bottom:2.2rem; left:50%; transform:translateX(-50%);
+  font-size:.62rem; letter-spacing:.34em; text-transform:uppercase; color:var(--cream-dim);
+  display:flex; flex-direction:column; align-items:center; gap:.7rem;
+}
+.scroll-hint .bar{ width:1px; height:46px; background:linear-gradient(var(--gold),transparent); animation:hint 2s ease-in-out infinite; }
+@keyframes hint{ 0%,100%{ transform:scaleY(.4); opacity:.4; transform-origin:top } 50%{ transform:scaleY(1); opacity:1; transform-origin:top } }
+
+@media(max-width:900px){
+  .hero-grid{ grid-template-columns:1fr; gap:2.5rem; }
+  .hero-panels{ height:380px; order:-1; }
+}
+
+/* =========================================================
+   ПОДЗАГОЛОВКИ СЕКЦИЙ
+========================================================= */
+.sec-pad{ padding:7rem 0; }
+.sec-head{ max-width:60ch; margin-bottom:3.5rem; }
+.sec-head .eyebrow{ margin-bottom:1.4rem; }
+
+/* =========================================================
+   PROBLEM
+========================================================= */
+.problem{ border-top:1px solid var(--line-soft); }
+.prob-grid{ display:grid; grid-template-columns:1fr 1fr; gap:2.5rem 4rem; margin-top:1rem; }
+.prob-item{ display:flex; gap:1.4rem; padding:1.6rem 0; border-top:1px solid var(--line-soft); }
+.prob-item .no{ font-family:var(--serif); font-style:italic; font-size:1.5rem; color:var(--gold-deep); min-width:48px; }
+.prob-item p{ color:var(--cream-soft); font-size:1.02rem; }
+.prob-item strong{ color:var(--cream); font-weight:500; }
+@media(max-width:760px){ .prob-grid{ grid-template-columns:1fr; gap:0; } }
+
+/* =========================================================
+   AI SOLUTION
+========================================================= */
+.solution{ background:linear-gradient(180deg, transparent, rgba(21,18,13,.5), transparent); }
+.sol-grid{ display:grid; grid-template-columns:.9fr 1.1fr; gap:4rem; align-items:center; }
+.sol-list{ list-style:none; }
+.sol-list li{
+  padding:1.5rem 0; border-bottom:1px solid var(--line-soft);
+  display:flex; gap:1.3rem; align-items:flex-start;
+  opacity:.55; transition:opacity .5s, padding-left .5s; cursor:default;
+}
+.sol-list li:hover{ opacity:1; padding-left:.6rem; }
+.sol-list li .mk{ color:var(--gold); font-family:var(--serif); font-size:1.1rem; line-height:1.4; }
+.sol-list li span{ font-size:1.05rem; color:var(--cream); font-weight:300; }
+.sol-visual{ position:relative; }
+.sol-visual .frame{ aspect-ratio:4/5; }
+.sol-tag{
+  position:absolute; bottom:-18px; left:-18px; background:var(--ink-2);
+  border:1px solid var(--line); border-radius:12px; padding:1rem 1.4rem;
+  font-family:var(--serif); font-style:italic; color:var(--champagne); font-size:1.1rem;
+  box-shadow:0 20px 50px -28px #000;
+}
+@media(max-width:900px){ .sol-grid{ grid-template-columns:1fr; gap:2.5rem; } }
+
+/* =========================================================
+   RUNWAY — sticky scroll demo «Одна модель → 5 образов»
+========================================================= */
+.runway{ position:relative; }
+.runway-sticky{
+  position:sticky; top:0; height:100vh; display:grid;
+  grid-template-columns:1fr 1fr; align-items:center; gap:3rem;
+  width:90%; max-width:var(--maxw); margin:0 auto;
+}
+/* Левая фиксированная модель */
+.model-stage{ position:relative; display:flex; align-items:center; justify-content:center; height:78vh; }
+.model-aura{
+  position:absolute; width:78%; height:88%; border-radius:50% 50% 46% 46%;
+  filter:blur(60px); opacity:.55; transition:background 1.1s var(--ease), opacity 1.1s var(--ease);
+  background:radial-gradient(circle, var(--a1,#c6a24e), transparent 68%);
+}
+.model-frame{
+  position:relative; z-index:2; width:74%; height:100%;
+  border-radius:240px 240px 26px 26px; overflow:hidden;
+  border:1px solid var(--line); background:var(--ink-2);
+  transition:border-color 1s var(--ease), box-shadow 1s var(--ease);
+  display:flex; align-items:center; justify-content:center;
+}
+.model-frame .ph{ text-align:center; color:var(--cream-dim); padding:1rem; }
+.model-index{
+  position:absolute; z-index:3; top:1.5rem; left:1.5rem;
+  font-family:var(--serif); font-size:.95rem; letter-spacing:.1em; color:var(--champagne);
+}
+.model-index b{ font-size:2.4rem; display:block; color:var(--gold); font-weight:500; }
+
+/* Правая колонка — карточки образов */
+.outfit-track{ position:relative; height:78vh; }
+.outfit-card{
+  position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center;
+  opacity:0; transform:translateY(40px); pointer-events:none;
+  transition:opacity .8s var(--ease), transform .8s var(--ease);
+}
+.outfit-card.active{ opacity:1; transform:none; pointer-events:auto; }
+.outfit-card .o-no{ font-family:var(--serif); font-style:italic; font-size:1.1rem; color:var(--gold); }
+.outfit-card h3{ font-size:clamp(2rem,4vw,3.2rem); margin:.4rem 0 1rem; }
+.outfit-card .o-desc{ color:var(--cream-soft); max-width:38ch; margin-bottom:1.6rem; }
+.o-tags{ display:flex; flex-wrap:wrap; gap:.6rem; margin-bottom:1.8rem; }
+.o-tags span{
+  font-size:.66rem; letter-spacing:.22em; text-transform:uppercase; color:var(--champagne);
+  border:1px solid var(--line); border-radius:999px; padding:.5rem .95rem;
+}
+.outfit-card .frame{ aspect-ratio:16/9; max-width:380px; }
+
+/* Прогресс-полоса образов */
+.runway-progress{
+  position:sticky; top:0; z-index:5; height:0;
+}
+.rp-inner{
+  position:absolute; top:14vh; right:5%; display:flex; flex-direction:column; gap:.9rem;
+}
+.rp-dot{ display:flex; align-items:center; gap:.7rem; opacity:.4; transition:opacity .5s; }
+.rp-dot.on{ opacity:1; }
+.rp-dot i{ width:26px; height:1px; background:var(--cream); transition:background .5s, width .5s; }
+.rp-dot.on i{ background:var(--gold); width:42px; }
+.rp-dot small{ font-size:.6rem; letter-spacing:.2em; color:var(--cream-soft); }
+
+/* Заголовок секции runway */
+.runway-intro{ padding:7rem 0 1rem; text-align:center; }
+.runway-intro .big{ font-size:clamp(2.2rem,6vw,5rem); }
+
+/* Мобильная версия runway */
+.runway-mobile{ display:none; }
+@media(max-width:900px){
+  .runway-sticky, .runway-progress{ display:none; }
+  .runway-desktop{ display:none; }
+  .runway-mobile{ display:block; }
+  .om-card{ padding:2rem 0; border-top:1px solid var(--line-soft); }
+  .om-card .frame{ aspect-ratio:4/5; margin-top:1.2rem; }
+}
+
+/* =========================================================
+   SERVICES — горизонтальные карточки
+========================================================= */
+.services{ background:linear-gradient(180deg, transparent, rgba(16,14,11,.6)); }
+.svc-head{ display:flex; justify-content:space-between; align-items:flex-end; gap:2rem; flex-wrap:wrap; }
+.svc-nav{ display:flex; gap:.8rem; }
+.svc-nav button{
+  width:52px; height:52px; border-radius:50%; background:transparent;
+  border:1px solid var(--line); color:var(--cream); cursor:pointer;
+  font-size:1.1rem; transition:border-color .4s, color .4s, background .4s;
+}
+.svc-nav button:hover{ border-color:var(--gold); color:var(--gold); }
+.svc-track{
+  display:flex; gap:1.6rem; margin-top:3rem; overflow-x:auto;
+  scroll-snap-type:x mandatory; padding-bottom:1.5rem; scroll-behavior:smooth;
+  scrollbar-width:thin;
+}
+.svc-track::-webkit-scrollbar{ height:4px; }
+.svc-track::-webkit-scrollbar-thumb{ background:var(--gold-deep); border-radius:10px; }
+.svc-card{
+  flex:0 0 320px; scroll-snap-align:start; min-height:360px;
+  background:linear-gradient(165deg, rgba(230,212,176,.05), rgba(11,10,8,.2));
+  border:1px solid var(--line); border-radius:18px; padding:2.2rem;
+  display:flex; flex-direction:column; justify-content:space-between;
+  transition:transform .5s var(--ease), border-color .5s, background .5s;
+}
+.svc-card:hover{ transform:translateY(-8px); border-color:var(--gold); background:linear-gradient(165deg, rgba(230,212,176,.1), rgba(11,10,8,.2)); }
+.svc-card .num{ font-family:var(--serif); font-style:italic; font-size:1.1rem; color:var(--gold-deep); }
+.svc-card h3{ font-size:1.7rem; margin:.8rem 0 1rem; }
+.svc-card p{ font-size:.95rem; color:var(--cream-soft); }
+.svc-card .arrow{ margin-top:2rem; font-size:1.3rem; color:var(--gold); }
+
+/* =========================================================
+   WORKFLOW
+========================================================= */
+.workflow{ border-top:1px solid var(--line-soft); }
+.wf-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:0; margin-top:3rem; }
+.wf-step{ padding:2.4rem 1.8rem 2.4rem 0; border-top:2px solid var(--line); position:relative; transition:border-color .5s; }
+.wf-step:hover{ border-color:var(--gold); }
+.wf-step .wn{ font-family:var(--serif); font-size:3.4rem; color:var(--gold-deep); line-height:1; transition:color .5s; }
+.wf-step:hover .wn{ color:var(--gold); }
+.wf-step h3{ font-size:1.4rem; margin:1rem 0 .6rem; }
+.wf-step p{ font-size:.9rem; color:var(--cream-soft); max-width:24ch; }
+@media(max-width:900px){ .wf-grid{ grid-template-columns:1fr 1fr; } }
+@media(max-width:560px){ .wf-grid{ grid-template-columns:1fr; } }
+
+/* =========================================================
+   BENEFITS
+========================================================= */
+.benefits{ background:linear-gradient(180deg, transparent, rgba(21,18,13,.45), transparent); }
+.ben-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:1.4rem; margin-top:3rem; }
+.ben-item{
+  border:1px solid var(--line); border-radius:16px; padding:2.2rem;
+  background:rgba(16,14,11,.4); transition:transform .5s var(--ease), border-color .5s;
+}
+.ben-item:hover{ transform:translateY(-6px); border-color:var(--gold); }
+.ben-item .bi{
+  width:46px; height:46px; border-radius:12px; border:1px solid var(--gold);
+  display:flex; align-items:center; justify-content:center; color:var(--gold);
+  font-family:var(--serif); font-style:italic; margin-bottom:1.4rem; font-size:1.3rem;
+}
+.ben-item h3{ font-size:1.4rem; margin-bottom:.5rem; }
+.ben-item p{ font-size:.9rem; color:var(--cream-soft); }
+@media(max-width:900px){ .ben-grid{ grid-template-columns:1fr 1fr; } }
+@media(max-width:560px){ .ben-grid{ grid-template-columns:1fr; } }
+
+/* =========================================================
+   BEFORE / AFTER
+========================================================= */
+.compare{ border-top:1px solid var(--line-soft); }
+.cmp-table{ margin-top:3rem; border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+.cmp-row{ display:grid; grid-template-columns:1.1fr 1fr 1fr; align-items:center; border-bottom:1px solid var(--line-soft); }
+.cmp-row:last-child{ border-bottom:none; }
+.cmp-row.head{ background:rgba(21,18,13,.7); }
+.cmp-cell{ padding:1.4rem 1.8rem; font-size:.96rem; }
+.cmp-cell.param{ color:var(--cream-soft); font-weight:500; letter-spacing:.02em; }
+.cmp-cell.trad{ color:var(--cream-dim); }
+.cmp-cell.ai{ color:var(--champagne); border-left:1px solid var(--line-soft); background:rgba(198,162,78,.04); }
+.cmp-row.head .cmp-cell{ font-family:var(--serif); font-size:1.1rem; }
+.cmp-row.head .ai{ color:var(--gold); }
+.cmp-cell .tick{ color:var(--gold); margin-right:.5rem; }
+@media(max-width:680px){
+  .cmp-cell{ padding:1rem; font-size:.84rem; }
+  .cmp-row{ grid-template-columns:1fr .9fr .9fr; }
+}
+
+/* =========================================================
+   FINAL CTA
+========================================================= */
+.final{ padding:8rem 0; text-align:center; position:relative; overflow:hidden; }
+.final::before{
+  content:""; position:absolute; inset:0; z-index:-1;
+  background:radial-gradient(ellipse at center, rgba(198,162,78,.14), transparent 65%);
+}
+.final h2{ font-size:clamp(2.4rem,7vw,6rem); max-width:16ch; margin:1.6rem auto 2.2rem; }
+.final h2 em{ font-family:var(--serif-2); color:var(--champagne); }
+.final .contacts{ display:flex; flex-direction:column; align-items:center; gap:.5rem; margin-top:2.6rem; }
+.final .phone{
+  font-family:var(--serif); font-size:clamp(1.8rem,4vw,2.8rem); color:var(--cream);
+  text-decoration:none; transition:color .4s;
+}
+.final .phone:hover{ color:var(--gold); }
+.final .name{ font-size:.78rem; letter-spacing:.32em; text-transform:uppercase; color:var(--gold); }
+
+footer{ border-top:1px solid var(--line-soft); padding:2.5rem 0; }
+.foot{ display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--cream-dim); }
+.foot .brand{ font-size:.95rem; letter-spacing:.02em; }
+
+@media(max-width:760px){
+  .sec-pad{ padding:5rem 0; }
+  .hero{ padding:7rem 0 4rem; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ФОНОВЫЕ ЭФФЕКТЫ -->
+<div class="bg-fx">
+  <div class="bg-glow a"></div>
+  <div class="bg-glow b"></div>
+</div>
+<div class="grain"></div>
+
+<!-- НАВИГАЦИЯ -->
+<header class="nav" id="nav">
+  <div class="brand"><b>AI</b> Content Studio <span>for Fashion Brands</span></div>
+  <nav class="nav-links">
+    <a href="#problem">Проблема</a>
+    <a href="#solution">Решение</a>
+    <a href="#runway">5 образов</a>
+    <a href="#services">Услуги</a>
+    <a href="#compare">Сравнение</a>
+  </nav>
+  <a href="tel:+998701318048" class="btn-ghost nav-cta">Связаться</a>
+</header>
+
+<div class="wrap">
+
+<!-- ============================ 1. HERO ============================ -->
+<section class="hero" id="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-text">
+        <div class="eyebrow hero-fade">AI Content Studio · Fashion</div>
+        <h1>
+          <span class="row"><span>AI-Студия</span></span>
+          <span class="row"><span>Fashion <span class="serif-i">контента</span></span></span>
+          <span class="row"><span>для брендов</span></span>
+        </h1>
+        <p class="sub hero-fade">Fashion-контент без съёмочных дней, студий и долгого продакшна.</p>
+        <p class="desc hero-fade">Создаём идеи, сценарии, AI-визуалы, рекламные ролики и монтаж для fashion-брендов, которым нужен быстрый, стильный и масштабируемый контент.</p>
+        <div class="hero-cta hero-fade">
+          <a href="tel:+998701318048" class="btn"><span class="dot"></span>+998 70 131 80 48 — Искандар</a>
+          <a href="#runway" class="btn-ghost">Смотреть демо</a>
+        </div>
+      </div>
+
+      <!-- Плавающие fashion-панели (video/gif placeholders) -->
+      <div class="hero-panels">
+        <!-- ЗАМЕНИТЬ: основной hero-ролик. Пример:
+             <video src="assets/hero.mp4" autoplay muted loop playsinline></video>
+             или GIF: <img src="assets/hero.gif" alt=""> -->
+        <div class="panel p1 frame float-a">
+          <!-- ЗАМЕНИТЬ: <video src="assets/hero.mp4" autoplay muted loop playsinline></video> -->
+          <img src="assets/hero-main.png" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;">
+        </div>
+        <!-- ЗАМЕНИТЬ: второй визуал (lookbook/деталь) -->
+        <div class="panel p2 frame float-b">
+          <!-- ЗАМЕНИТЬ: <img src="assets/detail.gif" alt=""> -->
+          <img src="assets/hero-detail.png" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;">
+        </div>
+        <div class="panel p3">
+          <div class="stat"><b>5×</b><span>больше контента</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-hint"><div class="bar"></div>Scroll</div>
+</section>
+
+<!-- ============================ 2. PROBLEM ============================ -->
+<section class="problem sec-pad" id="problem">
+  <div class="container">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Реальность продакшна</div>
+      <h2 class="h-sec">Каждая коллекция требует <span class="serif-i">всё больше</span> визуала — а ресурсов всегда меньше.</h2>
+    </div>
+    <div class="prob-grid">
+      <div class="prob-item reveal d1"><div class="no">01</div><p><strong>Новая коллекция — новый объём контента.</strong> Каждый запуск требует десятки кадров, роликов и адаптаций под площадки.</p></div>
+      <div class="prob-item reveal d2"><div class="no">02</div><p><strong>Съёмки съедают время и бюджет.</strong> Аренда студии, свет, оборудование, постпродакшн — и всё это до первого результата.</p></div>
+      <div class="prob-item reveal d1"><div class="no">03</div><p><strong>Команда усложняет процесс.</strong> Модели, локации, стилисты, логистика — слишком много переменных на один кадр.</p></div>
+      <div class="prob-item reveal d2"><div class="no">04</div><p><strong>Соцсети не ждут.</strong> Instagram, TikTok, Stories и Reels требуют постоянного визуального обновления.</p></div>
+      <div class="prob-item reveal d1"><div class="no">05</div><p><strong>Один креатив быстро выгорает.</strong> То, что работало вчера, сегодня уже не цепляет — нужны новые идеи постоянно.</p></div>
+      <div class="prob-item reveal d2"><div class="no">06</div><p><strong>Масштаб упирается в продакшн.</strong> Хочется тестировать больше идей, но каждая стоит отдельной съёмки.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 3. AI SOLUTION ============================ -->
+<section class="solution sec-pad" id="solution">
+  <div class="container">
+    <div class="sol-grid">
+      <div>
+        <div class="sec-head reveal" style="margin-bottom:2rem">
+          <div class="eyebrow">AI меняет правила</div>
+          <h2 class="h-sec">Студия, <span class="serif-i">которая</span> не спит.</h2>
+        </div>
+        <ul class="sol-list reveal d2">
+          <li><span class="mk">✦</span><span>Campaign visuals без полноценной съёмки</span></li>
+          <li><span class="mk">✦</span><span>Одна модель в 5 разных образах</span></li>
+          <li><span class="mk">✦</span><span>Мгновенная смена локации, стиля, сезона, света и настроения</span></li>
+          <li><span class="mk">✦</span><span>Reels, баннеры, lookbook, Stories и TikTok-адаптации</span></li>
+          <li><span class="mk">✦</span><span>Тест fashion-концепций ещё до реального продакшна</span></li>
+        </ul>
+      </div>
+      <div class="sol-visual reveal d3">
+        <!-- ЗАМЕНИТЬ: ролик «было → стало» / процесс генерации AI -->
+        <div class="frame">
+          <!-- ЗАМЕНИТЬ: <video src="assets/ai-process.mp4" autoplay muted loop playsinline></video> -->
+          <img src="assets/solution.png" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;">
+        </div>
+        <div class="sol-tag">от брифа<br>до кампании</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 4. RUNWAY: Одна модель → 5 образов ============================ -->
+<section id="runway">
+  <div class="container runway-intro reveal">
+    <div class="eyebrow" style="justify-content:center">Интерактивное демо</div>
+    <h2 class="big" style="margin-top:1.2rem">Одна модель <span class="serif-i">→</span> 5 образов</h2>
+    <p class="lede" style="margin:1.2rem auto 0; text-align:center">Прокручивайте — образ, ткань, цвет и аура вокруг модели меняются в реальном времени.</p>
+  </div>
+
+  <!-- DESKTOP: sticky scroll demo. Высота секции = под 5 образов -->
+  <div class="runway runway-desktop" id="runwayDesktop" style="height:560vh;">
+    <div class="runway-progress">
+      <div class="rp-inner" id="rpInner">
+        <div class="rp-dot on"><i></i><small>01 Минимал Блэк</small></div>
+        <div class="rp-dot"><i></i><small>02 Вечернее Золото</small></div>
+        <div class="rp-dot"><i></i><small>03 Стрит Люкс</small></div>
+        <div class="rp-dot"><i></i><small>04 Летний Лён</small></div>
+        <div class="rp-dot"><i></i><small>05 Зимний Эдиториал</small></div>
+      </div>
+    </div>
+
+    <div class="runway-sticky">
+      <!-- ЛЕВО: фиксированная модель -->
+      <div class="model-stage">
+        <div class="model-aura" id="modelAura"></div>
+        <div class="model-index" id="modelIndex"><b>01</b>/ 05</div>
+        <!-- ЗАМЕНИТЬ: видео/gif модели. Можно менять src по образу через JS,
+             либо держать один ролik и менять ауру/цвет (как сейчас). -->
+        <div class="model-frame" id="modelFrame">
+          <!-- ЗАМЕНИТЬ: <video src="assets/model-loop.mp4" autoplay muted loop playsinline></video> -->
+          <img id="modelImg" src="assets/look-01.png" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:opacity .6s ease;">
+        </div>
+      </div>
+
+      <!-- ПРАВО: карточки образов -->
+      <div class="outfit-track" id="outfitTrack">
+        <!-- 01 -->
+        <article class="outfit-card active" data-a1="#9aa0a6">
+          <div class="o-no">01 — Look</div>
+          <h3>Минимал Блэк</h3>
+          <p class="o-desc">Чистый силуэт, графика и тишина. Базовый total black для имиджевых кампаний и premium-каталога.</p>
+          <div class="o-tags"><span>Monochrome</span><span>Studio</span><span>Editorial</span></div>
+        </article>
+        <!-- 02 -->
+        <article class="outfit-card" data-a1="#c6a24e">
+          <div class="o-no">02 — Look</div>
+          <h3>Вечернее Золото</h3>
+          <p class="o-desc">Вечерний свет, шампань и блеск ткани. Образ для праздничных и premium-промо кампаний.</p>
+          <div class="o-tags"><span>Glamour</span><span>Champagne</span><span>Night</span></div>
+        </article>
+        <!-- 03 -->
+        <article class="outfit-card" data-a1="#7d5a3c">
+          <div class="o-no">03 — Look</div>
+          <h3>Стрит Люкс</h3>
+          <p class="o-desc">Город, фактура асфальта и дерзкий крой. Динамичный образ под Reels и TikTok-форматы.</p>
+          <div class="o-tags"><span>Urban</span><span>Bold</span><span>Reels</span></div>
+        </article>
+        <!-- 04 -->
+        <article class="outfit-card" data-a1="#cdbb8f">
+          <div class="o-no">04 — Look</div>
+          <h3>Летний Лён</h3>
+          <p class="o-desc">Тёплый свет, лён и воздух. Лёгкий сезонный образ для летних коллекций и lookbook.</p>
+          <div class="o-tags"><span>Summer</span><span>Linen</span><span>Daylight</span></div>
+        </article>
+        <!-- 05 -->
+        <article class="outfit-card" data-a1="#8fa3b3">
+          <div class="o-no">05 — Look</div>
+          <h3>Зимний Эдиториал</h3>
+          <p class="o-desc">Холодный тон, объём и драма. Концептуальный образ для зимних кампаний и обложек.</p>
+          <div class="o-tags"><span>Winter</span><span>Cinematic</span><span>Cover</span></div>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE: вертикальный список образов -->
+  <div class="container runway-mobile">
+    <!-- ЗАМЕНИТЬ ролики в каждой .frame ниже -->
+    <div class="om-card reveal" data-a1="#9aa0a6"><div class="o-no">01 — Минимал Блэк</div><h3 style="font-family:var(--serif);font-size:1.9rem;margin:.4rem 0;">Минимал Блэк</h3><p class="o-desc">Чистый силуэт, графика и тишина. Total black для имиджевых кампаний.</p><div class="o-tags"><span>Monochrome</span><span>Studio</span></div><div class="frame"><div class="ph"><div class="play"></div><small>Look 01 · Clip</small></div></div></div>
+    <div class="om-card reveal" data-a1="#c6a24e"><div class="o-no">02 — Вечернее Золото</div><h3 style="font-family:var(--serif);font-size:1.9rem;margin:.4rem 0;">Вечернее Золото</h3><p class="o-desc">Вечерний свет, шампань и блеск ткани для premium-промо.</p><div class="o-tags"><span>Glamour</span><span>Champagne</span></div><div class="frame"><div class="ph"><div class="play"></div><small>Look 02 · Clip</small></div></div></div>
+    <div class="om-card reveal" data-a1="#7d5a3c"><div class="o-no">03 — Стрит Люкс</div><h3 style="font-family:var(--serif);font-size:1.9rem;margin:.4rem 0;">Стрит Люкс</h3><p class="o-desc">Город и дерзкий крой. Динамичный образ под Reels и TikTok.</p><div class="o-tags"><span>Urban</span><span>Reels</span></div><div class="frame"><div class="ph"><div class="play"></div><small>Look 03 · Clip</small></div></div></div>
+    <div class="om-card reveal" data-a1="#cdbb8f"><div class="o-no">04 — Летний Лён</div><h3 style="font-family:var(--serif);font-size:1.9rem;margin:.4rem 0;">Летний Лён</h3><p class="o-desc">Тёплый свет и лён. Лёгкий сезонный образ для lookbook.</p><div class="o-tags"><span>Summer</span><span>Linen</span></div><div class="frame"><div class="ph"><div class="play"></div><small>Look 04 · Clip</small></div></div></div>
+    <div class="om-card reveal" data-a1="#8fa3b3"><div class="o-no">05 — Зимний Эдиториал</div><h3 style="font-family:var(--serif);font-size:1.9rem;margin:.4rem 0;">Зимний Эдиториал</h3><p class="o-desc">Холодный тон и драма. Концептуальный образ для обложек.</p><div class="o-tags"><span>Winter</span><span>Cinematic</span></div><div class="frame"><div class="ph"><div class="play"></div><small>Look 05 · Clip</small></div></div></div>
+  </div>
+</section>
+
+<!-- ============================ 5. SERVICES ============================ -->
+<section class="services sec-pad" id="services">
+  <div class="container">
+    <div class="svc-head reveal">
+      <div class="sec-head" style="margin-bottom:0">
+        <div class="eyebrow">Что мы делаем</div>
+        <h2 class="h-sec">Полный цикл <span class="serif-i">fashion</span>-контента</h2>
+      </div>
+      <div class="svc-nav">
+        <button id="svcPrev" aria-label="Назад">‹</button>
+        <button id="svcNext" aria-label="Вперёд">›</button>
+      </div>
+    </div>
+
+    <div class="svc-track" id="svcTrack">
+      <div class="svc-card reveal"><div><div class="num">01</div><h3>Креативные идеи</h3><p>Идеи и концепции, которые цепляют. Превращаем продукт в историю и визуальный язык бренда.</p></div><div class="arrow">→</div></div>
+      <div class="svc-card reveal d1"><div><div class="num">02</div><h3>Концепции кампаний</h3><p>Целостные fashion-кампании: настроение, палитра, сценарий и визуальная драматургия.</p></div><div class="arrow">→</div></div>
+      <div class="svc-card reveal d2"><div><div class="num">03</div><h3>AI-генерация фото</h3><p>Кампанийные визуалы и каталог без съёмочного дня. Любые образы, локации и свет.</p></div><div class="arrow">→</div></div>
+      <div class="svc-card reveal d3"><div><div class="num">04</div><h3>AI-генерация видео</h3><p>Рекламные ролики и движущиеся визуалы для соцсетей и баннеров — из текста и референсов.</p></div><div class="arrow">→</div></div>
+      <div class="svc-card reveal"><div><div class="num">05</div><h3>Монтаж Reels и TikTok</h3><p>Монтаж, ритм, субтитры и звук под вертикальные форматы и алгоритмы площадок.</p></div><div class="arrow">→</div></div>
+      <div class="svc-card reveal d1"><div><div class="num">06</div><h3>Lookbook и каталог</h3><p>Цельная серия образов в едином стиле — premium-каталог коллекции в одном ключе.</p></div><div class="arrow">→</div></div>
+      <div class="svc-card reveal d2"><div><div class="num">07</div><h3>Сезонные промо</h3><p>Сезонные кампании: лето, зима, праздники, распродажи — быстро и в характере бренда.</p></div><div class="arrow">→</div></div>
+      <div class="svc-card reveal d3"><div><div class="num">08</div><h3>Адаптация форматов</h3><p>Один креатив → Instagram, Stories, Reels, TikTok, баннеры и lookbook без потери качества.</p></div><div class="arrow">→</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 6. WORKFLOW ============================ -->
+<section class="workflow sec-pad">
+  <div class="container">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Как мы работаем</div>
+      <h2 class="h-sec">Четыре шага <span class="serif-i">до</span> готовой кампании</h2>
+    </div>
+    <div class="wf-grid">
+      <div class="wf-step reveal"><div class="wn">01</div><h3>Бриф</h3><p>Изучаем бренд, коллекцию и цели. Собираем референсы и tone of voice.</p></div>
+      <div class="wf-step reveal d1"><div class="wn">02</div><h3>Креативное направление</h3><p>Формируем концепцию, образы, палитру и визуальный сценарий кампании.</p></div>
+      <div class="wf-step reveal d2"><div class="wn">03</div><h3>AI-продакшн</h3><p>Генерируем визуалы и видео: образы, локации, свет и настроение.</p></div>
+      <div class="wf-step reveal d3"><div class="wn">04</div><h3>Монтаж и форматы</h3><p>Монтаж, цвет, финальные форматы под все площадки бренда.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 7. BENEFITS ============================ -->
+<section class="benefits sec-pad">
+  <div class="container">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Ценность</div>
+      <h2 class="h-sec">Больше контента. <span class="serif-i">Меньше</span> продакшна.</h2>
+    </div>
+    <div class="ben-grid">
+      <div class="ben-item reveal"><div class="bi">↗</div><h3>Быстрый запуск</h3><p>Кампании выходят в свет за дни, а не недели — без ожидания съёмочного дня.</p></div>
+      <div class="ben-item reveal d1"><div class="bi">◇</div><h3>Меньше затрат</h3><p>Никаких студий, аренды, логистики и большой команды на каждый кадр.</p></div>
+      <div class="ben-item reveal d2"><div class="bi">▦</div><h3>Больше за цикл</h3><p>Десятки визуалов и форматов из одной идеи — за один производственный цикл.</p></div>
+      <div class="ben-item reveal"><div class="bi">∞</div><h3>Тест стилей</h3><p>Пробуйте разные направления и образы до выбора финального решения.</p></div>
+      <div class="ben-item reveal d1"><div class="bi">⬡</div><h3>Адаптивность</h3><p>Подстраиваемся под разные бренды, коллекции и сезонные задачи.</p></div>
+      <div class="ben-item reveal d2"><div class="bi">✦</div><h3>Premium-уровень</h3><p>Визуальный язык luxury-сегмента — каждый кадр работает на восприятие бренда.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 8. BEFORE / AFTER ============================ -->
+<section class="compare sec-pad" id="compare">
+  <div class="container">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Сравнение</div>
+      <h2 class="h-sec">Традиционная съёмка <span class="serif-i">vs</span> AI-контент</h2>
+    </div>
+    <div class="cmp-table reveal d1">
+      <div class="cmp-row head">
+        <div class="cmp-cell param">Параметр</div>
+        <div class="cmp-cell trad">Традиционная fashion-съёмка</div>
+        <div class="cmp-cell ai">AI Fashion Content</div>
+      </div>
+      <div class="cmp-row">
+        <div class="cmp-cell param">Время</div>
+        <div class="cmp-cell trad">Недели подготовки и съёмок</div>
+        <div class="cmp-cell ai"><span class="tick">✦</span>Дни — от брифа до результата</div>
+      </div>
+      <div class="cmp-row">
+        <div class="cmp-cell param">Бюджет</div>
+        <div class="cmp-cell trad">Студия, команда, аренда, логистика</div>
+        <div class="cmp-cell ai"><span class="tick">✦</span>Кратно ниже на единицу контента</div>
+      </div>
+      <div class="cmp-row">
+        <div class="cmp-cell param">Количество образов</div>
+        <div class="cmp-cell trad">Ограничено съёмочным днём</div>
+        <div class="cmp-cell ai"><span class="tick">✦</span>Десятки образов из одной идеи</div>
+      </div>
+      <div class="cmp-row">
+        <div class="cmp-cell param">Локации</div>
+        <div class="cmp-cell trad">Поиск, аренда, переезды</div>
+        <div class="cmp-cell ai"><span class="tick">✦</span>Любая локация мгновенно</div>
+      </div>
+      <div class="cmp-row">
+        <div class="cmp-cell param">Правки</div>
+        <div class="cmp-cell trad">Пересъёмка — дорого и долго</div>
+        <div class="cmp-cell ai"><span class="tick">✦</span>Быстрые итерации без пересъёмки</div>
+      </div>
+      <div class="cmp-row">
+        <div class="cmp-cell param">Адаптация форматов</div>
+        <div class="cmp-cell trad">Отдельная работа под каждый</div>
+        <div class="cmp-cell ai"><span class="tick">✦</span>Все форматы из одного исходника</div>
+      </div>
+      <div class="cmp-row">
+        <div class="cmp-cell param">Сезонные кампании</div>
+        <div class="cmp-cell trad">Новая съёмка под каждый сезон</div>
+        <div class="cmp-cell ai"><span class="tick">✦</span>Смена сезона за минуты</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 9. FINAL CTA ============================ -->
+<section class="final" id="contact">
+  <div class="container reveal">
+    <div class="eyebrow" style="justify-content:center">Начнём</div>
+    <h2>Создадим вашу следующую <em>fashion-кампанию</em> с AI.</h2>
+    <a href="tel:+998701318048" class="btn"><span class="dot"></span>Связаться сейчас</a>
+    <div class="contacts">
+      <a href="tel:+998701318048" class="phone">+998 70 131 80 48</a>
+      <div class="name">Искандар</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container foot">
+    <div class="brand"><b>AI</b> Content Studio · Fashion</div>
+    <div>AI Content Studio for Fashion Brands · Tashkent</div>
+    <div>+998 70 131 80 48</div>
+  </div>
+</footer>
+
+</div><!-- /wrap -->
+
+<script>
+/* =========================================================
+   1. Загрузка hero
+========================================================= */
+window.addEventListener('load', ()=>{
+  document.getElementById('hero').classList.add('loaded');
+  ['assets/look-01.png','assets/look-02.png','assets/look-03.png','assets/look-04.png','assets/look-05.png']
+    .forEach(src=>{ const img=new Image(); img.src=src; });
+});
+
+/* =========================================================
+   2. NAV — фон при скролле
+========================================================= */
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', ()=>{
+  nav.classList.toggle('scrolled', window.scrollY > 40);
+}, {passive:true});
+
+/* =========================================================
+   3. REVEAL on scroll (IntersectionObserver)
+========================================================= */
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+}, {threshold:.18, rootMargin:'0px 0px -8% 0px'});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* =========================================================
+   4. RUNWAY — sticky scroll demo (desktop)
+   Меняем активный образ, ауру и цвет рамки модели по прогрессу скролла.
+========================================================= */
+const isDesktop = window.matchMedia('(min-width:901px)');
+const runway   = document.getElementById('runwayDesktop');
+const cards    = Array.from(document.querySelectorAll('#outfitTrack .outfit-card'));
+const dots     = Array.from(document.querySelectorAll('#rpInner .rp-dot'));
+const aura     = document.getElementById('modelAura');
+const frame    = document.getElementById('modelFrame');
+const modelImg = document.getElementById('modelImg');
+const idxLabel = document.getElementById('modelIndex');
+const lookImages = ['assets/look-01.png','assets/look-02.png','assets/look-03.png','assets/look-04.png','assets/look-05.png'];
+let current = -1;
+
+function setLook(i){
+  if(i === current) return;
+  current = i;
+  cards.forEach((c,n)=>c.classList.toggle('active', n===i));
+  dots.forEach((d,n)=>d.classList.toggle('on', n===i));
+  const color = cards[i].dataset.a1 || '#c6a24e';
+  if(modelImg && lookImages[i]){
+    modelImg.style.opacity = '0';
+    setTimeout(()=>{ modelImg.src = lookImages[i]; modelImg.style.opacity = '1'; }, 300);
+  }
+  aura.style.setProperty('--a1', color);
+  frame.style.borderColor = color;
+  frame.style.boxShadow = '0 0 0 1px '+color+'33, 0 40px 90px -50px '+color+'66';
+  idxLabel.innerHTML = '<b>'+String(i+1).padStart(2,'0')+'</b>/ 05';
+}
+
+let ticking = false;
+function onRunwayScroll(){
+  if(!isDesktop.matches || !runway) return;
+  if(ticking) return;
+  ticking = true;
+  requestAnimationFrame(()=>{
+    const rect  = runway.getBoundingClientRect();
+    const total = runway.offsetHeight - window.innerHeight;
+    const scrolled = Math.min(Math.max(-rect.top, 0), total);
+    const progress = total > 0 ? scrolled/total : 0;
+    let idx = Math.floor(progress * cards.length);
+    if(idx > cards.length-1) idx = cards.length-1;
+    if(idx < 0) idx = 0;
+    setLook(idx);
+    ticking = false;
+  });
+}
+window.addEventListener('scroll', onRunwayScroll, {passive:true});
+window.addEventListener('resize', onRunwayScroll);
+onRunwayScroll();
+setLook(0);
+
+/* =========================================================
+   5. RUNWAY — mobile: ставим ауру по карточке, попадающей в экран
+========================================================= */
+const mobileCards = document.querySelectorAll('.runway-mobile .om-card');
+if(mobileCards.length){
+  const mio = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        const c = e.target.dataset.a1 || '#c6a24e';
+        e.target.querySelector('.frame').style.borderColor = c;
+        e.target.querySelector('.frame').style.boxShadow = '0 30px 70px -45px '+c+'88';
+      }
+    });
+  }, {threshold:.4});
+  mobileCards.forEach(c=>mio.observe(c));
+}
+
+/* =========================================================
+   6. SERVICES — горизонтальная навигация карточек
+========================================================= */
+const track = document.getElementById('svcTrack');
+const step = 340; // ширина карточки + gap
+document.getElementById('svcNext').addEventListener('click', ()=> track.scrollBy({left:step, behavior:'smooth'}));
+document.getElementById('svcPrev').addEventListener('click', ()=> track.scrollBy({left:-step, behavior:'smooth'}));
+
+/* =========================================================
+   7. HERO — лёгкий parallax плавающих панелей
+========================================================= */
+const panels = document.querySelectorAll('.hero-panels .panel');
+window.addEventListener('scroll', ()=>{
+  const y = window.scrollY;
+  if(y > window.innerHeight) return;
+  panels.forEach((p,i)=>{
+    const depth = (i+1) * 0.04;
+    p.style.transform = 'translateY('+ (y*depth) +'px)';
+  });
+}, {passive:true});
+</script>
+</body>
+</html>
