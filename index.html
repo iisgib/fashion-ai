@@ -366,11 +366,25 @@ header.nav.scrolled{
 /* Мобильная версия runway */
 .runway-mobile{ display:none; }
 @media(max-width:900px){
-  .runway-sticky, .runway-progress{ display:none; }
-  .runway-desktop{ display:none; }
-  .runway-mobile{ display:block; }
-  .om-card{ padding:2rem 0; border-top:1px solid var(--line-soft); }
-  .om-card .frame{ aspect-ratio:4/5; margin-top:1.2rem; }
+  .runway-progress{ display:none; }
+  .runway-desktop{ display:block; }
+  .runway-mobile{ display:none; }
+  .runway-sticky{
+    grid-template-columns: 1fr;
+    height:100vh;
+    gap:0;
+  }
+  .model-stage{
+    height:55vh;
+  }
+  .outfit-track{
+    height:45vh;
+    padding: 0 1.2rem;
+  }
+  .outfit-card h3{ font-size:1.6rem; }
+  .outfit-card .o-desc{ font-size:.88rem; max-width:100%; }
+  .model-index{ top:.8rem; left:.8rem; }
+  .model-index b{ font-size:1.6rem; }
 }
 
 /* =========================================================
