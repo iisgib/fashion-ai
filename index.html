@@ -370,36 +370,44 @@ header.nav.scrolled{
   .runway-desktop{ display:block; }
   .runway-mobile{ display:none; }
   .runway-sticky{
-    grid-template-columns: 1fr;
+    position:sticky;
+    top:0;
     height:100vh;
+    grid-template-columns:1fr;
+    grid-template-rows:58vh 42vh;
     gap:0;
-    padding: 0 1.2rem;
+    padding:0 1.2rem;
+    align-items:start;
   }
   .model-stage{
-    height:52vh;
-    padding-top: 4rem;
+    height:58vh;
+    padding-top:5rem;
   }
   .model-frame{
-    width:62%;
-    border-radius:180px 180px 20px 20px;
+    width:58%;
+    border-radius:160px 160px 18px 18px;
   }
+  .model-aura{
+    width:62%;
+    height:72%;
+  }
+  .model-index{
+    top:5rem;
+    left:1rem;
+  }
+  .model-index b{ font-size:1.3rem; }
   .outfit-track{
-    height:48vh;
-    padding: 0 0.5rem;
-    display:flex;
-    align-items:center;
+    height:42vh;
+    padding:0.8rem 0.5rem 0;
   }
   .outfit-card{
     justify-content:flex-start;
-    padding-top:1rem;
+    padding-top:0;
   }
-  .outfit-card h3{ font-size:1.5rem; margin:.3rem 0 .6rem; }
-  .outfit-card .o-desc{ font-size:.84rem; max-width:100%; margin-bottom:.8rem; }
-  .outfit-card .o-no{ font-size:.9rem; }
-  .o-tags span{ font-size:.58rem; padding:.4rem .7rem; }
-  .model-index{ top:4.5rem; left:1rem; }
-  .model-index b{ font-size:1.4rem; }
-  .model-aura{ width:65%; height:75%; }
+  .outfit-card .o-no{ font-size:.85rem; }
+  .outfit-card h3{ font-size:1.4rem; margin:.2rem 0 .5rem; }
+  .outfit-card .o-desc{ font-size:.82rem; max-width:100%; margin-bottom:.7rem; line-height:1.4; }
+  .o-tags span{ font-size:.56rem; padding:.35rem .65rem; }
 }
 
 /* =========================================================
@@ -461,7 +469,8 @@ header.nav.scrolled{
 .ben-item .bi{
   width:46px; height:46px; border-radius:12px; border:1px solid var(--gold);
   display:flex; align-items:center; justify-content:center; color:var(--gold);
-  font-family:var(--serif); font-style:italic; margin-bottom:1.4rem; font-size:1.3rem;
+  font-family:var(--sans); font-style:normal; margin-bottom:1.4rem; font-size:1.1rem;
+  font-weight:400;
 }
 .ben-item h3{ font-size:1.4rem; margin-bottom:.5rem; }
 .ben-item p{ font-size:.9rem; color:var(--cream-soft); }
