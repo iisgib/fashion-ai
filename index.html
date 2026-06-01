@@ -308,7 +308,7 @@ header.nav.scrolled{
   width:90%; max-width:var(--maxw); margin:0 auto;
 }
 /* Левая фиксированная модель */
-.model-stage{ position:relative; display:flex; align-items:center; justify-content:center; height:78vh; }
+.model-stage{ position:relative; display:flex; align-items:center; justify-content:center; height:78vh; overflow:visible; }
 .model-aura{
   position:absolute; width:78%; height:88%; border-radius:50% 50% 46% 46%;
   filter:blur(60px); opacity:.55; transition:background 1.1s var(--ease), opacity 1.1s var(--ease);
@@ -319,7 +319,7 @@ header.nav.scrolled{
   border-radius:240px 240px 26px 26px; overflow:hidden;
   border:1px solid var(--line); background:var(--ink-2);
   transition:border-color 1s var(--ease), box-shadow 1s var(--ease);
-  display:flex; align-items:center; justify-content:center;
+  display:flex; align-items:flex-start; justify-content:center;
 }
 .model-frame .ph{ text-align:center; color:var(--cream-dim); padding:1rem; }
 .model-index{
@@ -384,8 +384,13 @@ header.nav.scrolled{
     padding-top:5rem;
   }
   .model-frame{
-    width:58%;
+    width:64%;
+    height:90%;
     border-radius:160px 160px 18px 18px;
+    align-items:flex-start;
+  }
+  #modelImg{
+    object-position: top center;
   }
   .model-aura{
     width:62%;
@@ -958,7 +963,7 @@ function setLook(i){
 
 let ticking = false;
 function onRunwayScroll(){
-  if(!isDesktop.matches || !runway) return;
+  if(!runway) return;
   if(ticking) return;
   ticking = true;
   requestAnimationFrame(()=>{
